@@ -1,0 +1,38 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# Virtual environments
+.venv/
+venv/
+env/
+# Environment variables and secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+secrets.json
+# Generated and local project data
+output/
+temp/
+input/
+*.mp3
+*.wav
+*.mp4
+*.webm
+*.mov
+# Local backups
+*.before-*.py
+*.backup.py
+*.bak
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,6 @@
+PySide6
+edge-tts
+beautifulsoup4
+lxml
+Pillow
+pysubs2
