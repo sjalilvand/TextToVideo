@@ -1441,7 +1441,94 @@ class MainWindow(QMainWindow):
         return None
 
     def get_render_subtitle_path(self) -> Path | None:
-        """Return the preferred subtitle file for editing/rendering."""
+        """Return a valid preferred subtitle file.
+
+        An edited SRT is preferred only when its timeline is compatible
+        with the corresponding original generated SRT. This prevents an
+        old or incomplete edited file from being used for a newer audio
+        narration.
+        """
+        import re
+
+        def timeline_end_seconds(path: Path) -> float | None:
+            """Read the greatest subtitle end time from an SRT file."""
+            try:
+                text = path.read_text(
+                    encoding="utf-8-sig",
+                    errors="replace",
+                )
+            except OSError:
+                return None
+
+            pattern = re.compile(
+                r"-->"                       # SRT separator
+                r"\s*"
+                r"(\d{1,3}):(\d{2}):(\d{2})"
+                r"[,.](\d{1,3})"
+            )
+
+            greatest_end: float | None = None
+
+            for match in pattern.finditer(text):
+                hours = int(match.group(1))
+                minutes = int(match.group(2))
+                seconds = int(match.group(3))
+
+                milliseconds_text = (
+                    match.group(4)[:3].ljust(3, "0")
+                )
+                milliseconds = int(milliseconds_text)
+
+                value = (
+                    hours * 3600
+                    + minutes * 60
+                    + seconds
+                    + milliseconds / 1000.0
+                )
+
+                if greatest_end is None or value > greatest_end:
+                    greatest_end = value
+
+            return greatest_end
+
+        def original_for_edited(path: Path) -> Path | None:
+            """Return the expected original file for an edited SRT."""
+            stem = path.stem
+
+            if not stem.lower().endswith(".edited"):
+                return None
+
+            original_stem = stem[:-len(".edited")]
+
+            if not original_stem:
+                return None
+
+            return path.with_name(
+                f"{original_stem}{path.suffix}"
+            )
+
+        def edited_timeline_is_valid(path: Path) -> bool:
+            """Validate edited SRT against its current original SRT."""
+            original = original_for_edited(path)
+
+            if original is None or not original.is_file():
+                # No matching original exists, so timeline comparison
+                # is not possible. Preserve the user's edited file.
+                return True
+
+            edited_end = timeline_end_seconds(path)
+            original_end = timeline_end_seconds(original)
+
+            if edited_end is None or original_end is None:
+                return False
+
+            maximum_difference = 2.0
+
+            return (
+                abs(edited_end - original_end)
+                <= maximum_difference
+            )
+
         candidates: list[Path] = []
 
         if self.generated_srt_path is not None:
@@ -1449,6 +1536,13 @@ class MainWindow(QMainWindow):
 
             if generated_path.stem.lower().endswith(".edited"):
                 candidates.append(generated_path)
+
+                original_path = original_for_edited(
+                    generated_path
+                )
+
+                if original_path is not None:
+                    candidates.append(original_path)
             else:
                 candidates.append(
                     generated_path.with_name(
@@ -1466,15 +1560,30 @@ class MainWindow(QMainWindow):
 
         for candidate in candidates:
             candidate = Path(candidate)
-            key = str(candidate.resolve()).lower()
+            key = str(candidate.resolve()).casefold()
 
             if key in checked:
                 continue
 
             checked.add(key)
 
-            if candidate.is_file() and candidate.stat().st_size > 0:
-                return candidate
+            if not candidate.is_file():
+                continue
+
+            if candidate.stat().st_size <= 0:
+                continue
+
+            is_edited = (
+                candidate.stem.lower().endswith(".edited")
+            )
+
+            if (
+                is_edited
+                and not edited_timeline_is_valid(candidate)
+            ):
+                continue
+
+            return candidate
 
         return None
 
