@@ -342,6 +342,16 @@ class RenderWorker(QThread):
         )
 
     def create_subtitle_filter(self) -> str:
+        """Create a libass subtitle filter using UI pixel values.
+
+        libass interprets SRT styles against an internal reference
+        height of approximately 288 pixels. The values entered in the
+        application, however, represent pixels in the final video.
+
+        Convert final-video pixel values to the libass reference scale
+        so that subtitle size remains visually consistent at different
+        output resolutions.
+        """
         assert self.subtitle_path is not None
 
         escaped_path = (
@@ -360,17 +370,49 @@ class RenderWorker(QThread):
             .replace(",", r"\,")
         )
 
+        ass_scale = 288.0 / float(self.height)
+
+        ass_font_size = max(
+            1.0,
+            float(self.subtitle_size) * ass_scale,
+        )
+
+        ass_margin_v = max(
+            0,
+            round(float(self.subtitle_margin) * ass_scale),
+        )
+
+        # Approximately 90 final-video pixels on each horizontal side.
+        ass_margin_h = max(
+            1,
+            round(90.0 * ass_scale),
+        )
+
+        # Outline and shadow are specified as final-video pixel values.
+        ass_outline = max(
+            0.1,
+            3.0 * ass_scale,
+        )
+
+        ass_shadow = max(
+            0.0,
+            1.0 * ass_scale,
+        )
+
         style = (
             f"FontName={font},"
-            f"FontSize={self.subtitle_size},"
+            f"FontSize={ass_font_size:.3f},"
             "PrimaryColour=&H00FFFFFF,"
             "OutlineColour=&H00000000,"
             "BackColour=&H80000000,"
             "BorderStyle=1,"
-            "Outline=3,"
-            "Shadow=1,"
+            f"Outline={ass_outline:.3f},"
+            f"Shadow={ass_shadow:.3f},"
             "Alignment=2,"
-            f"MarginV={self.subtitle_margin}"
+            f"MarginV={ass_margin_v},"
+            f"MarginL={ass_margin_h},"
+            f"MarginR={ass_margin_h},"
+            "Bold=0"
         )
 
         return (
