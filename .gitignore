@@ -36,3 +36,9 @@ input/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Timestamped local backups
+backup-before-*/
+*.backup-*
+*.backup-before-*
+*.before-*
