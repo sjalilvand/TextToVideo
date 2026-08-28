@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 from app.core.tts_worker import TTSWorker
 from app.core.render_worker import RenderWorker
 from app.features.subtitles.editor_dialog import SubtitleEditorDialog
+from app.features.voice_profiles.dialog import VoiceProfilesDialog
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -326,6 +327,16 @@ class MainWindow(QMainWindow):
             "fa-IR-FaridNeural"
         )
 
+        self.voice_profiles_button = QPushButton(
+            "🎙 مدیریت صدای من"
+        )
+        self.voice_profiles_button.setToolTip(
+            "ضبط، واردکردن و مدیریت نمونه‌های صدای شخصی"
+        )
+        self.voice_profiles_button.clicked.connect(
+            self.open_voice_profiles
+        )
+
         speed_label = QLabel("سرعت گویندگی:")
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
         self.speed_slider.setRange(-50, 50)
@@ -368,7 +379,8 @@ class MainWindow(QMainWindow):
         )
 
         form.addWidget(voice_label, 0, 0)
-        form.addWidget(self.voice_combo, 0, 1, 1, 2)
+        form.addWidget(self.voice_combo, 0, 1)
+        form.addWidget(self.voice_profiles_button, 0, 2)
 
         form.addWidget(speed_label, 1, 0)
         form.addWidget(self.speed_slider, 1, 1)
@@ -1118,6 +1130,10 @@ class MainWindow(QMainWindow):
             f"قالب ویدئو: {formats.get(format_id, 'عمودی')}\n"
             f"پوشه خروجی: {OUTPUT_DIR}"
         )
+
+    def open_voice_profiles(self):
+        dialog = VoiceProfilesDialog(self)
+        dialog.exec()
 
     def generate_voice_sample(self):
         text = self.text_editor.toPlainText().strip()

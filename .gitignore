@@ -44,3 +44,6 @@ backup-before-*/
 *.before-*
 
 local-backups/
+
+# Private local voice samples
+voice-profiles/
